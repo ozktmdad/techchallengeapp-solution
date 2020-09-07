@@ -1,12 +1,4 @@
 ---
-# general details about our VPC
-vpc_name: techchallenge-vpc
-vpc_key: techchallenge-key
-vpc_dns_zone: techchallenge
-
-# IP CIDR block for the VPC
-vpc_cidr_block: 10.0.0.0/16
-
 # conf.toml setttings
 DbUser: postgres
 DbPassword: !vault |
@@ -40,3 +32,11 @@ aws_secret_key: !vault |
           6262646466386630320a363063373832306465336334326364386239333737663061323139356266
           62633934343836336462326466663962333935656533373838363738393535353739383235396433
           3464383933616165383530386237366363616339666332373962
+
+# general details about our VPC
+vpc_name: techchallenge-vpc
+vpc_key: techchallenge-key
+vpc_dns_zone: techchallenge
+
+# IP CIDR block for the VPC
+vpc_cidr_block: 10.0.0.0/16
