@@ -1,0 +1,37 @@
+---
+# Build docker repo
+- name: build docker repo in ecs
+  ecs_ecr:
+    name: "{{ docker_repo }}"
+  register: ecs_ecr
+
+- name: setfact base uri
+  set_fact:
+    base_uri: "{{ ecs_ecr.repository.repositoryUri | dirname }}"
+
+- name: set fact uri repo 
+  set_fact:
+    repo_uri: "{{ ecs_ecr.repository.repositoryUri }}"
+
+# Login to aws repo
+- name: Log into aws ecr repo
+  shell: aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ base_uri }}
+  # I would have like to get his working, but just running out of time
+  # docker_login:
+  #   registry: "{{ repo_uri }}"
+  #   username: AWS
+  #   password: "{{ base_uri }}"
+#     reauthorize: yes
+#     debug: yes
+
+# Build Docker File image
+- name: Build an image and push it to a private repo
+  docker_image:
+    build:
+      path: "{{ repo_destination }}"
+      pull: yes
+    name: "{{ repo_uri }}"
+    tag: latest
+    push: yes
+    source: build
+  register: docker_image

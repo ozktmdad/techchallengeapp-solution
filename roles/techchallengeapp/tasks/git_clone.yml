@@ -1,0 +1,13 @@
+---
+
+# Create git path
+- name: create repo destination directory
+  file:
+    path: "{{ repo_destination }}"
+    state: directory
+
+# clone a repo with separate git directory
+- git:
+    repo: "{{ git_repo }}"
+    dest: "{{ repo_destination }}"
+    

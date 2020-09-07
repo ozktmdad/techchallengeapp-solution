@@ -1,0 +1,26 @@
+# ---
+# specific variables for the "postgressql.techchallengeapp" host
+
+postgressql_security_group_ids:
+  - "{{ vpc_security_group_ids_vpc }}"
+
+postgressql_availability_zones:
+  - "{{ aws_region }}a"
+  - "{{ aws_region }}b"
+  - "{{ aws_region }}c"
+  
+postgressql_subnet_ids:
+  - "{{ private_a_subnet_id }}"
+  - "{{ private_b_subnet_id }}"
+  - "{{ private_c_subnet_id }}"
+
+
+postgressql_dns: postgressqldb.{{ vpc_dns_zone }}
+
+postgressql_engine: postgres
+postgressql_version: 10.7
+postgressql_storage: 100
+postgressql_multi_az: yes
+
+postgressql_instance_type: db.t2.micro
+postgressql_availability_zone: "{{ aws_region }}a"

@@ -1,0 +1,23 @@
+---
+# use an Ansible module to configure the subnet group for our db
+- name: configure DB subnet group
+  rds_subnet_group:
+    name: "{{ DbName }}-subnets"
+    description: "Subnets used by {{ DbName }} postgressql db"
+    subnets: "{{ postgressql_subnet_ids }}"
+    state: present
+
+# Create rds instance
+- name: Create DB instance
+  rds_instance:
+    db_name: "{{ DbName }}"
+    db_instance_identifier: "{{ DbName }}"
+    state: present
+    engine: "{{ postgressql_engine }}"
+    db_instance_class: "{{ postgressql_instance_type }}"
+    username: "{{ DbUser }}"
+    password: "{{DbPassword }}"
+    allocated_storage: "{{ postgressql_storage }}"
+    multi_az: "{{ postgressql_multi_az }}"
+    vpc_security_group_ids: "{{ postgressql_security_group_ids }}"
+    db_subnet_group_name: "{{ DbName }}-subnets"

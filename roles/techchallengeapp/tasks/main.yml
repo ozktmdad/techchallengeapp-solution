@@ -1,0 +1,39 @@
+---
+# playbook that runs our VPC tasks for any hosts in the `vpc` group, providing AWS credentials in the environment 
+
+# - hosts: vpc
+#   environment:
+#     AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+#     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+#     AWS_REGION: "{{ aws_region }}"
+#   tasks:
+#     - include_tasks: create_vpc.yml
+#     - include_tasks: create_gateways.yml
+
+# - hosts: postgressql
+#   environment:
+#     AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+#     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+#     AWS_REGION: "{{ aws_region }}"
+#   tasks:
+#     - import_tasks: facts.yml
+#     - import_tasks: create_rds.yml
+
+# - hosts: git
+#   environment:
+#     AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+#     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+#     AWS_REGION: "{{ aws_region }}"
+#   tasks:
+#     - include_tasks: git_clone.yml
+#     - include_tasks: docker_build.yml
+
+- hosts: ecs
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tasks:
+    - include_tasks: facts.yml
+    #- include_tasks: create_load_balancer.yml
+    - include_tasks: create_ecs_containers.yml

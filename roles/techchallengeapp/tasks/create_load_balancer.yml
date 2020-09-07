@@ -1,0 +1,27 @@
+---
+
+# Provison a load balancer to place the apps behind
+- name: create elb target group
+  elb_target_group:
+    name: "{{ project_name }}-target-group"
+    protocol: http
+    port: "{{ external_port }}"
+    vpc_id: "{{ vpc_id }}"
+    state: present
+
+- name: Create load balancer
+  elb_application_lb:
+    name: "{{ project_name }}-lb"
+    security_groups:
+      - "{{ vpc_security_group_ids_public_http }}"
+    subnets:
+      - "{{ public_a_subnet_id }}"
+      - "{{ public_b_subnet_id }}"
+      - "{{ public_c_subnet_id }}"
+    listeners:
+      - Protocol: HTTP
+        Port: "{{ external_port }}"
+        DefaultActions:
+          - Type: forward 
+            TargetGroupName: "{{ project_name }}-target-group"
+    state: present

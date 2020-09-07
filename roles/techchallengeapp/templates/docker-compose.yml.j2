@@ -1,0 +1,15 @@
+---
+version: '3'
+services:
+  webapp:
+    image: {{ repo_uri }}
+    env_file: variables.env
+    command: {{ cmd }}
+    ports:
+      - "{{ external_port }}:{{ ListenPort }}"
+    logging:
+      driver: awslogs
+      options: 
+        awslogs-group: {{ project_name }}-log
+        awslogs-region: {{ aws_region }}
+        awslogs-stream-prefix: webapp

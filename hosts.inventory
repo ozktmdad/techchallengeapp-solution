@@ -1,0 +1,17 @@
+[git]
+git.techchallengeapp
+
+[ecs]
+esc.techchallengeapp
+
+[postgressql]
+postgressql.techchallengeapp
+
+[vpc]
+vpc.techchallengeapp
+
+[project.techchallengeapp:children]
+vpc
+postgressql
+ecs
+git
