@@ -27,6 +27,17 @@
   set_fact:
     target_group_arn: "{{  target_group_info.target_groups[0].target_group_arn }}"
 
+# - name: get iam role info
+#   iam_role_info:
+#   register: result
+
+
+# - debug:
+#     msg: "{{ result.iam_roles. }}"
+
+# - debug:
+#     msg: "{{ redwqt }}"
+
 # Get repo_uri info
 - name: Get information aobut docker repo
   ecs_ecr:
@@ -100,23 +111,70 @@
 
 # Had some errors starting EC2 instnaces and not being able to deploy container
 # Add dirty workaround to wait an extra 60 seconds
-- name: sleep for 60 seconds and continue with play
-  wait_for:
-    timeout: 60
-  delegate_to: localhost
+# - name: sleep for 60 seconds and continue with play
+#   wait_for:
+#     timeout: 60
+#   delegate_to: localhost
 
 # Run Task to update the database (its a task becuase it runs and exits)
-- name: Run ECS Task
-  command: ecs-cli compose -f {{ compose_destination }}/docker-compose-update-db.yml --ecs-params {{ compose_destination }}/ecs_params.yml up --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile
+# - name: Run ECS Task
+#   command: ecs-cli compose -f {{ compose_destination }}/docker-compose-update-db.yml --ecs-params {{ compose_destination }}/ecs_params.yml up --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile
 
 #- name: Run ECS Task
 #  command: ecs-cli compose -f {{ compose_destination }}/docker-compose.yml --ecs-params {{ compose_destination }}/ecs_params.yml  scale 3  --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile
 
 # Run ECS Service for running app server continually.  ECS server automatically restarts instance if it fails
-- name: Start container service
-  command: ecs-cli compose -f {{ compose_destination }}/docker-compose.yml  --ecs-params {{ compose_destination }}/ecs_params.yml service up --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile 
+# - name: Start container service
+#   command: ecs-cli compose -f {{ compose_destination }}/docker-compose.yml  --ecs-params {{ compose_destination }}/ecs_params.yml service up --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile 
   #--target-group-arn {{ target_group_arn }}
   # --target-groups targetGroupArn=arn:elasticloadbalancing:{{ aws_region }}:
+
+    # Basic listing example
+- name: Get cluser info
+  ecs_taskdefinition_info:
+   task_definition: TechChallengeApp
+  register: ecs_taskdefinition_info
+
+- debug:
+    msg: "{{ ecs_taskdefinition_info.revision }}"
+
+- name: Increase number of container service intances
+  ecs_service:
+    state: present
+    name: TechChallengeApp
+    force_new_deployment: yes
+    cluster: "{{ ecs_name }}"
+    task_definition: TechChallengeApp:{{ ecs_taskdefinition_info.revision }}
+    desired_count: 0 
+    
+- name: Delete existing service
+  ecs_service:
+    name: TechChallengeApp
+    state: absent
+    cluster: "{{ ecs_name }}"
+   
+- name: sleep for 60 seconds and wait for service to drain
+  wait_for:
+    timeout: 60
+  delegate_to: localhost
+
+# More info here
+- name: Increase number of container service intances
+  ecs_service:
+    state: present
+    name: TechChallengeApp
+    force_new_deployment: yes
+    cluster: "{{ ecs_name }}"
+    task_definition: TechChallengeApp:{{ ecs_taskdefinition_info.revision }}
+    desired_count: "{{ number_containers }}"
+    load_balancers: 
+      - targetGroupArn: "{{ target_group_arn }}"
+        containerName: webapp
+        containerPort: 3000
+    # role: ElasticLoadBalancingFullAccess
+
+      # ecs-cli compose -f nginx-compose.yml service up --target-group-arn arn:aws:elasticloadbalancing:us-east-1:aws_account_id:targetgroup/ecs-cli-alb/9856106fcc5d4be8 --container-name nginx --container-port 80 --role ecsServiceRole --health-check-grace-period 25
+
 
 # Lets scale up the service params
 # - name: Scale number of services
