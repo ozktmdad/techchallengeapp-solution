@@ -1,0 +1,232 @@
+---
+# This is super ugly, I pushed forward with it as you probably want to review it asap
+# Create ECS cluster and add EC2 instances
+# Can't get this to work as I would love to spend more time on it
+# Lots of dirty workarounds as having issues running native ansible commands
+# but its fathers day
+- name: create ecs cluster
+  ecs_cluster:
+    name: "{{ ecs_name }}"
+    state: present
+  register: ecs_cluster
+
+- name: get rds info
+  rds_instance_info:
+    db_instance_identifier: "{{ DbName }}"
+  register: database_info
+
+# Variable name is different as I am trying to match conf.toml cause I can
+- name: set fact db hostname
+  set_fact:
+    DbHost: "{{ database_info.instances[0].endpoint.address }}"
+
+- name: Get target group
+  elb_target_group_info:
+    names: "{{ project_name }}-target-group"
+  register: target_group_info
+
+- name:
+  set_fact:
+    target_group_arn: "{{  target_group_info.target_groups[0].target_group_arn }}"
+
+# Get repo_uri info
+- name: Get information aobut docker repo
+  ecs_ecr:
+    name: "{{ docker_repo }}"
+  register: ecs_ecr
+
+- name: set fact repo_uri 
+  set_fact:
+    repo_uri: "{{ ecs_ecr.repository.repositoryUri }}"
+
+# Get fact elb info
+- name: get fact elb_info
+  elb_application_lb_info:
+    names:
+      - "{{ project_name }}-lb"
+  register: elb_info
+
+# Set fact elb url
+- name: set fact elb url
+  set_fact:
+    elb_url: "{{ elb_info.load_balancers[0].dns_name }}"
+
+# Workaround as having issues with native ansible commands
+# Create ECS CLI profile
+- name: Run ecs-cli command to configure cluster
+  command: ecs-cli configure --cluster {{ ecs_name }} --default-launch-type EC2 --config-name {{ project_name }}-config --region {{ aws_region }}
+  register: cmd
+
+- name: create ECS CLI Proile
+  command: ecs-cli configure profile --access-key {{ aws_access_key }} --secret-key {{ aws_secret_key }} --profile-name {{ project_name }}-profile
+
+# Note this task run by cli is not idempotent
+- name: Run ecs-cli bring up the cluster
+  command: ecs-cli up --capability-iam --size {{ ec2_intances }} --instance-type {{ ec2_instance_size }} --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile --vpc {{ vpc_id }} --subnets {{ public_a_subnet_id }},{{ public_b_subnet_id }},{{ public_c_subnet_id }} --force
+
+# Create log group, fails if groups exists, now I'm really pushing this through wich is why I am stating ignore_errors
+- name: Create log group project-name-log
+  command: aws logs create-log-group --log-group-name {{ project_name }}-log
+  ignore_errors: yes
+
+- name: set fact container command
+  set_fact:
+    cmd: updatedb -s
+
+# Create docker compose file for updating the database
+- name: Template a docker-compose.yml for updating database
+  template:
+    src: ../templates/docker-compose.yml.j2
+    dest: "{{ compose_destination }}/docker-compose-update-db.yml"
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: '0644'
+
+- name: set fact container command
+  set_fact:
+    cmd: serve
+
+# Create docker compose file for serving the app
+- name: Template a docker-compose.yml for serving data
+  template:
+    src: ../templates/docker-compose.yml.j2
+    dest: "{{ compose_destination }}/docker-compose.yml"
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: '0644'
+    
+- name: Template a ecs_params.yml.j2
+  template:
+    src: ../templates/ecs_params.yml.j2
+    dest: "{{ compose_destination }}/ecs_params.yml"
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: '0644'
+
+- name: Template a variables.env.j2
+  template:
+    src: ../templates/variables.env.j2
+    dest: "{{ compose_destination }}/variables.env"
+    owner: "{{ local_user }}"
+    group: "{{ local_user }}"
+    mode: '0644'
+
+# Had some errors starting EC2 instnaces and not being able to deploy container
+# Add dirty workaround to wait an extra 60 seconds
+- name: sleep for 60 seconds and continue with play
+  wait_for:
+    timeout: 60
+  delegate_to: localhost
+
+# Run Task to update the database (its a task becuase it runs and exits)
+- name: Run ECS Task
+  command: ecs-cli compose -f {{ compose_destination }}/docker-compose-update-db.yml --ecs-params {{ compose_destination }}/ecs_params.yml up --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile
+
+# Run ECS Service for running app server continually.  ECS server automatically restarts instance if it fails
+- name: Start container service
+  command: ecs-cli compose -f {{ compose_destination }}/docker-compose.yml  --ecs-params {{ compose_destination }}/ecs_params.yml service up --cluster-config {{ project_name }}-config --ecs-profile {{ project_name }}-profile
+
+# Get task definintion info
+- name: Get task definition info
+  ecs_taskdefinition_info:
+   task_definition: TechChallengeApp
+  register: ecs_taskdefinition_info
+
+- name: Decrease number of container service intances
+  ecs_service:
+    state: present
+    name: TechChallengeApp
+    force_new_deployment: yes
+    cluster: "{{ ecs_name }}"
+    task_definition: TechChallengeApp:{{ ecs_taskdefinition_info.revision }}
+    desired_count: 0 
+    
+- name: Delete existing service
+  ecs_service:
+    name: TechChallengeApp
+    state: absent
+    cluster: "{{ ecs_name }}"
+   
+- name: sleep for 3 minutes and wait for service to drain
+  wait_for:
+    timeout: 180
+  delegate_to: localhost
+
+# More info here
+- name: create service behind load balancer with multiple instances
+  ecs_service:
+    state: present
+    name: TechChallengeApp
+    force_new_deployment: yes
+    cluster: "{{ ecs_name }}"
+    task_definition: TechChallengeApp:{{ ecs_taskdefinition_info.revision }}
+    desired_count: "{{ number_containers }}"
+    load_balancers: 
+      - targetGroupArn: "{{ target_group_arn }}"
+        containerName: webapp
+        containerPort: "{{ ListenPort }}"
+
+- debug:
+    msg:
+      - To access the TechChallengeApp please got to the following URL
+      - "http://{{ elb_url }}"
+  when: external_port != "80"
+
+- debug:
+    msg:
+      - To access the TechChallengeApp please got to the following URL
+      - "http://{{ elb_url }}:{{ external_port }}"
+  when: external_port == "80"
+
+# Print URL of load balancer
+
+
+# Lets scale up the service params
+# - name: Scale number of services
+#   command: ecs-cli scale --capability-iam --size {{ number_containers }} --cluster {{ ecs_name }} --region {{ aws_region }}
+
+# Following code not working as designed at the moment
+# Time contraint going with using bash scripts which I have successfully used in the past
+# - name: Create task definition
+#   ecs_taskdefinition:
+#     launch_type: EC2
+#     family: "{{ project_name }}-family"
+#     containers:
+#     - name: "{{ ecs_container }}-serve"
+#       essential: true
+#       image: "{{ repo_uri }}"
+#       command: 
+#         - serve
+#       logConfiguration:
+#         logDriver: awslogs
+#         options:
+#           awslogs-group: "{{ project_name }}-config"
+#           awslogs-region: "{{ aws_region }}"
+#           awslogs-stream-prefix: ecs-webapp
+#       portMappings:
+#       - containerPort: "{{ ListenPort }}"
+#         hostPort: "{{ external_port }}"
+#       cpu: 512
+#       memory: 524288000
+#     state: present
+#   register: ecs_taskdefinition
+
+# # Create EC2 instance
+
+# - name: create ECS service on VPC network
+#   ecs_service:
+#     state: present
+#     name: console-test-service
+#     cluster: "{{ ecs_name }}"
+#     task_definition: "{{ ecs_taskdefinition.taskdefinition.taskDefinitionArn }}"
+#     desired_count: 3
+#     network_configuration:
+#       security_groups:
+#         - "{{ vpc_security_group_ids_public_http }}"
+#       subnets: 
+#         - "{{ public_a_subnet_id }}"
+#         - "{{ public_b_subnet_id }}"
+#         - "{{ public_c_subnet_id }}"
+#     # load_balancers:
+#     # delay: 10
+#     # repeat: 10

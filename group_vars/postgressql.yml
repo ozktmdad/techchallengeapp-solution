@@ -1,0 +1,19 @@
+---
+# default variables for hosts in the group for PostgresSQL servers
+
+# Note Group vars not working in my testing version of Ansible 2.5.1
+# workaround moving them to host_vars
+# Please refer to https://github.com/ansible/ansible/issues/30877
+
+postgressql_security_group_ids:
+  - "{{ vpc_security_group_ids_vpc }}"
+
+postgressql_availability_zones:
+  - "{{ aws_region }}a"
+  - "{{ aws_region }}b"
+  - "{{ aws_region }}c"
+  
+postgressql_subnet_ids:
+  - "{{ private_a_subnet_id }}"
+  - "{{ private_b_subnet_id }}"
+  - "{{ private_c_subnet_id }}"

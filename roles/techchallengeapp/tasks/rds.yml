@@ -1,0 +1,13 @@
+---
+# playbook that builds PostgresSQL
+
+# first run a play for any cluster hosts to create them
+- hosts: postgressql
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tasks:
+
+    - import_tasks: facts.yml
+    - import_tasks: create_rds.yml

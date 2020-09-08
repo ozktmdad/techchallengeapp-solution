@@ -1,0 +1,7 @@
+---
+
+local_home: "{{ lookup('env','HOME') }}"
+
+# Git repo location
+git_repo: https://github.com/servian/TechChallengeApp.git
+repo_destination: "{{ local_home }}/src/TechChallengeApp"

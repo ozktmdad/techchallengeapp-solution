@@ -1,0 +1,48 @@
+---
+# Load Balancer availability zones
+elb_availability_zones:
+  - "{{ aws_region }}a"
+  - "{{ aws_region }}b"
+  - "{{ aws_region }}c"
+
+# a map defining the subnets we will build in the VPC
+# Only using az a, b and c as there are only 3 az's in my test AWS site Sydney
+vpc_subnets:
+  private-a:
+    cidr: 10.0.1.0/24
+    az: "{{ aws_region }}a"
+  public-a:
+    cidr: 10.0.2.0/24
+    az: "{{ aws_region }}a"
+  private-b:
+    cidr: 10.0.3.0/24
+    az: "{{ aws_region }}b"
+  public-b:
+    cidr: 10.0.4.0/24
+    az: "{{ aws_region }}b"
+  private-c:
+    cidr: 10.0.5.0/24
+    az: "{{ aws_region }}c"
+  public-c:
+    cidr: 10.0.6.0/24
+    az: "{{ aws_region }}c"
+
+# a list defining the security groups for our VPC
+vpc_security_groups:
+  - name: "{{ project_name }}-WebDMZ"
+    description: "Allow public web traffic"
+    rules:
+      - proto: tcp
+        cidr_ip: 0.0.0.0/0
+        ports:
+          - "{{ external_port }}"
+  - name: "{{ project_name }}-RDS"
+    description: Allow internal traffic into RDS
+    rules:
+      - proto: tcp
+        cidr_ip: "{{ vpc_cidr_block }}"
+        ports: "{{ DbPort }}"
+
+        # Not ideal to use cidr block for VPC 
+        # I would have preffered to use group here and append later on
+        # But time is getting the better of me and I need it to work

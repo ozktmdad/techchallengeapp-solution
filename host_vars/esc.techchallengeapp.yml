@@ -1,0 +1,17 @@
+# specific configuration for one of our ECS Cluster
+
+ecs_name: techchallengeapp-cluster
+ecs_config: techchallengeapp-config
+ecs_profile: techchallengeapp-ecs-profile
+ecs_container: techchallengeapp-container
+ec2_instance_size: t2.micro
+ec2_intances: 3
+
+local_home: "{{ lookup('env','HOME') }}"
+local_user: "{{ lookup('env','USER') }}"
+compose_destination: "{{ local_home }}/src/TechChallengeApp"
+
+# Container limits 
+cpu_shares: 100
+mem_limit: 524288000
+number_containers: 3

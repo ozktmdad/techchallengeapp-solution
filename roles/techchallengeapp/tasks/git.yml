@@ -1,0 +1,12 @@
+---
+ # playbook that runs our git and docker tasks
+
+- hosts: git
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+  tasks:
+    - include_tasks: git_clone.yml
+    - include_tasks: docker_build.yml

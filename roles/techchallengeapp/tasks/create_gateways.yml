@@ -1,0 +1,62 @@
+---
+# creates the gateways for the VPC, and sets up routing for the subnets
+
+- name: set fact private-a
+  set_fact:
+    private_a_subnet_id: "{{ item.value }}"
+  when: (item.key == "private-a")
+  with_items: "{{ vpc_subnet_ids }}"
+
+- name: set fact private-b
+  set_fact:
+    private_b_subnet_id: "{{ item.value }}"
+  when: (item.key == "private-b")
+  with_items: "{{ vpc_subnet_ids }}"
+
+- name: set fact private-c
+  set_fact:
+    private_c_subnet_id: "{{ item.value }}"
+  when: (item.key == "private-c")
+  with_items: "{{ vpc_subnet_ids }}"
+
+- name: set fact public-a
+  set_fact:
+    public_a_subnet_id: "{{ item.value }}"
+  when: (item.key == "public-a")
+  with_items: "{{ vpc_subnet_ids }}"
+
+- name: set fact public-b
+  set_fact:
+    public_b_subnet_id: "{{ item.value }}"
+  when: (item.key == "public-b")
+  with_items: "{{ vpc_subnet_ids }}"
+
+- name: set fact public-c
+  set_fact:
+    public_c_subnet_id: "{{ item.value }}"
+  when: (item.key == "public-c")
+  with_items: "{{ vpc_subnet_ids }}"
+
+# create the internet gateway, saving the output to extract the ID later
+- name: create internet gateway
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id }}"
+  register: create_gateway
+
+- name: "set facts: Gateway IDs and IP"
+  set_fact:
+    vpc_gateway_id: "{{ create_gateway.gateway_id }}"
+
+# public route table that routes through the internet gateway -- attach it to our three public subnets
+- name: create route table for public subnets
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id }}"
+    tags:
+      Name: "{{ vpc_name }}-WebDMZ"
+    subnets:
+      - "{{ public_a_subnet_id }}"
+      - "{{ public_b_subnet_id }}"
+      - "{{ public_c_subnet_id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ vpc_gateway_id }}"

@@ -1,0 +1,4 @@
+---
+ansible_connection: local
+project_name: techchallengeapp
+docker_repo: techchallengeapp-repository
