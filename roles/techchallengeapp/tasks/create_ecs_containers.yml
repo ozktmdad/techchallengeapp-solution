@@ -1,4 +1,5 @@
 ---
+# This is super ugly, I pushed forward with it as you probably want to review it asap
 # Create ECS cluster and add EC2 instances
 # Can't get this to work as I would love to spend more time on it
 # Lots of dirty workarounds as having issues running native ansible commands
@@ -169,13 +170,13 @@
     msg:
       - To access the TechChallengeApp please got to the following URL
       - "http://{{ elb_url }}"
-    when: external_port == "80"
+  when: external_port != "80"
 
 - debug:
     msg:
       - To access the TechChallengeApp please got to the following URL
       - "http://{{ elb_url }}:{{ external_port }}"
-    when: external_port != "80"
+  when: external_port == "80"
 
 # Print URL of load balancer
 

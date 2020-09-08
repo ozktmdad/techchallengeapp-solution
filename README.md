@@ -1,6 +1,6 @@
 ## techchallengeapp-solution
 
-> The solution to the techchallengeapp for DevOps engineer position at Servian
+The solution to the techchallengeapp for DevOps engineer position at Servian
 
 ## Design
 
@@ -103,12 +103,14 @@ Open file group_vars/project.techchallengeapp.yml and update variables:
 
 Run ansible playbook to deploy the solution:
 ```shell
-$ ansible-playbook -i hosts.inventory roles/techchallengeapp/tasks/main.yml --vault-password-file ~/techchallenge.vault
+$ ansible-playbook -i hosts.inventory roles/techchallengeapp/tasks/aws.yml --vault-password-file ~/techchallenge.vault
 ```
 
 ## Cleanup
 Future Release feature
 
 ## TODO
-- Add container instances to Load Balancer
+- Add idempotency, especially for ecs configuration and load balancer configuration
+- Breakdown playbook into different roles, VPC, RDS, Docker/Git, Load Balancer, ECS
+- Redesign use of Site file and breakdown of inventroy, rather that pointing directly to main.yml playbook
 - Write a cleanup resource playbook

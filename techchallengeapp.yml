@@ -1,0 +1,4 @@
+---
+- hosts: project.techchallengeapp
+  roles:
+    - techchallengeapp
