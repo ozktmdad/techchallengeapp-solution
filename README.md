@@ -10,9 +10,18 @@ The PostgresSQL database is configured as multi-az for high availbiltiy, in the 
 
 The application is deployed as multiple docker containers using AWS ECS service in the DMZ zone, behind a load balancer, and accessible publically on port 80 (default).
 
-TODO: Load Balancer 
+TODO: High Level Design diagram goes here 
 
-High Level Design diagram goes here.
+# Features of solution design
+- Resilient and highly available webapp tier and DB tier.
+- Webapp is connected a aws loadbalancer, sharing the load across multiple instances of the application.
+- Webapp is a container service meaning if a container instance stops a new instance will automatically be started.
+- EC2 instances which host the containers is part of a scalable auto scaling group, spread across mutliple AWS availability zones.
+- Database deployed in AWS RDS using mutli-az meaning, 
+- Security segragation between WebDMZ and RDS tiers.  
+- Postgres database is highly available using AWS RDS multi-az configuration.
+- Public WebDMZ zone only accessible to the outside world via port 80 (r can specify another port in configuration file).
+- Private RDS zone which cannot connect to servers outside of VPC.  Servers in the public DMZ can access RDS zone via default postgressql port 5432 (or can specify another port in configuration file).
 
 ## Prerequisites
 
